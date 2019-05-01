@@ -10,6 +10,8 @@ class Life:
 
     Food = 0
 
+    speed = 1
+
     def Birth(self, surface, name, x, y, color):
         self.name = name
         self.x = x
@@ -26,5 +28,24 @@ class Life:
         self.name = "Deceased (" + self.name +")"
 
     def Move(self,toX, toY):
-        x=toX
-        y=toY
+        if abs(toX - self.x) > abs(toY - self.y):
+            if abs(toX - self.x) > self.speed:
+                if toX - self.x<0:
+                    self.x -= self.speed
+                else:
+                    self.x += self.speed
+            else:
+                self.x = toX
+        else:
+            if abs(toY - self.y) > self.speed:
+                if toY - self.y < 0:
+                    self.y -= self.speed
+                else:
+                    self.y += self.speed
+            else:
+                self.y = toY
+
+    #def distance(self, ):
+
+    def locateClosestFood(self, FoodForms):
+        return FoodForms[0]

@@ -3,7 +3,7 @@ from Evolution1.Generics import colors
 
 class Food:
 
-    name = "Generic Life Form"
+    name = "Generic Food Form"
     x = 0
     y = 0
     color = colors["yellow"]
