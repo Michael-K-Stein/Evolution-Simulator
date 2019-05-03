@@ -11,6 +11,17 @@ from Evolution1.LifeForm import Life
 lPopulation = []
 lAverageSpeed = []
 
+# DEFINITIONS
+
+speed = 2
+width = 1200
+height = 800
+
+mutationFactor = 0.1 # Change caused by mutation
+mutationRate = 2 # 1 in this many
+
+# END DEFINITIONS
+
 def listPrint(l):
     for p in l:
         #print(p)
@@ -39,7 +50,7 @@ class Food:
         self.y = y
         self.surface = surface
         self.feed = feed
-        self.radius = 4 + feed
+        self.radius = int(7*((self.feed / 3)**0.5))
 
     def Remove(self):
         self.color = colors["brown"]
@@ -47,9 +58,9 @@ class Food:
 
 class Life:
 
-    name = "Generic Life Form"
-    x = 0
-    y = 0
+    name = "Null Life Form"
+    x = int(width/2)
+    y = int(height/2)
     color = Color(255,0,0,0)
     radius = 15
     sexy = 1
@@ -64,12 +75,14 @@ class Life:
     Altruism = 0
 
     offsprings = 0
+    #loffsprings = []
 
     life = 144
+    HoursSinceReproduction =0
 
     def Think(self):
-        if self.Violence == 0:
-            if self.Food < 6:
+        if self.Violence < 1:
+            if self.Food < 6 or self.HoursSinceReproduction < 6:
                 if len(self.getFoodForms()) > 0:
                     if self.intelligence >= 3:
                         x, y = self.locateSmartClosestFood()
@@ -77,7 +90,8 @@ class Life:
                         x, y = self.locateClosestFood()
                     self.Move(x, y)
             else:
-                if self.closestLife().Food > 6 or self.intelligence < 2:
+                clLife = self.closestLife()
+                if (clLife.Food > 6 and clLife.HoursSinceReproduction < 2) or self.intelligence < 2 or (clLife.Food > 6 and (clLife.sexy + self.sexy)/2 > clLife.HoursSinceReproduction/4):
                     # Look for sex
                     x, y = self.locateClosestLife()
                     self.Move(x, y)
@@ -95,10 +109,12 @@ class Life:
                         x, y = self.locateSmartClosestFood()
                     else:
                         x, y = self.locateClosestFood()
-                    clLife = self.closestLife()
-                    x1, y1 = clLife.x, clLife.y
-                    d = self.distanceTo(x1,y1)
-                    if d < self.distanceTo(x,y):
+                    d = 0
+                    if len(LifeForms) > 1:
+                        clLife = self.closestLife()
+                        x1, y1 = clLife.x, clLife.y
+                        d = self.distanceTo(x1,y1)
+                    if d < self.distanceTo(x,y) and len(LifeForms) > 1 and clLife.Violence == 0:
                         if d < self.radius + clLife.radius:
                             self.Murder(clLife)
                         else:
@@ -106,7 +122,8 @@ class Life:
                     else:
                         self.Move(x,y)
             else:
-                if self.closestLife().Food > 6 or self.intelligence < 2:
+                clLife = self.closestLife()
+                if (clLife.Food > 6 and clLife.HoursSinceReproduction < 2) or self.intelligence < 2 or (clLife.Food > 6 and (clLife.sexy + self.sexy) / 2 > clLife.HoursSinceReproduction / 4):
                     # Look for sex
                     x, y = self.locateClosestLife()
                     self.Move(x, y)
@@ -127,6 +144,7 @@ class Life:
         self.surface = surface
         self.sexy = sexy
         self.ini_speed = ini_speed
+        self.speed = math.ceil(ini_speed)
         self.intelligence = intelligence
         self.Violence = Violence
         self.Altruism = Altruism
@@ -190,33 +208,42 @@ class Life:
 
     def Murder(self, lifeForm):
         self.Food += lifeForm.Food
-        self.ini_speed =(lifeForm.speed / 10) + self.ini_speed
+        #self.ini_speed =(lifeForm.speed / 10) + self.ini_speed
         self.intelligence = (lifeForm.intelligence / 10) + self.intelligence
         self.sexy -= 0.1 * self.sexy
         lifeForm.Kill()
-        print(self.name,"Murdering: " + lifeForm.name)
+        #print(self.name,"Murdering: " + lifeForm.name)
 
     def TryToReproduce(self, partner):
         #print("Trying to fuck", "Will it work? ", randomChance(5 / ((self.sexy + partner.sexy)/2)) and self.Food > 5 and partner.Food > 5)
-        if self.Food > 5 and partner.Food > 5:
+        if (self.Food > 5 and partner.Food > 5 or (self.Food + partner.Food > 10 and self.Altruism > 0)) and self.HoursSinceReproduction < 1 and partner.HoursSinceReproduction < 1:
             if randomChance(5 / ((self.sexy + partner.sexy)/2)):
                 newLife = Life()
                 x, y = int((self.x + partner.x)/2),int((self.y + partner.y)/2)
                 n = randomName(True)
-                newLife.Birth(surface, n, x, y, self.averageColor(partner),mut((self.ini_speed+partner.ini_speed)/2),mut((self.sexy+partner.sexy)/2),mut((self.intelligence+partner.intelligence)/2))
+                newLife.Birth(surface, n, x, y, self.averageColor(partner),mut((self.ini_speed+partner.ini_speed)/2),mut((self.sexy+partner.sexy)/2),mut((self.intelligence+partner.intelligence)/2),Violence=mut((self.Violence + partner.Violence)/2),Altruism=mut((self.Altruism + partner.Altruism)/2))
                 LifeForms.append(newLife)
+                #self.loffsprings.append(newLife)
+                #partner.loffsprings.append(newLife)
                 #print(n,"was born!")
-                self.Food-=5
-                partner.Food-=5
+                if partner.Food <=5 and self.Altruism > 0:
+                    self.Food-= 11 - partner.Food
+                    partner.Food = 0
+                else:
+                    self.Food-=5
+                    partner.Food-=5
                 self.offsprings+=1
-            elif self.Violence>=2:
-                self.Food-=5
-                partner.Food-=5
-                clLife = self.closestLife()
-                x1, y1 = clLife.x, clLife.y
+                partner.offsprings+=1
+                self.HoursSinceReproduction = 24
+                partner.HoursSinceReproduction = 24
+            elif self.Violence >= 2 and partner.Violence < 1:
+                #self.Food-=5
+                #partner.Food-=5
+                #clLife = self.closestLife()
+                x1, y1 = partner.x, partner.y
                 d = self.distanceTo(x1, y1)
-                if d < self.radius + clLife.radius:
-                    self.Murder(clLife)
+                if d < self.radius + partner.radius:
+                    self.Murder(partner)
                 else:
                     self.Move(x1, y1)
 
@@ -252,16 +279,16 @@ class Life:
 
     def eat(self, food):
         self.Food += food
-        self.radius = 15 + int(abs(self.Food)**0.5)
-        if self.Food > 10:
-            self.speed = math.ceil(self.ini_speed * ((self.Food / 10)**0.5))
-        else:
-            self.speed = math.ceil(self.ini_speed)
+        self.radius = int(15 * (1 + ((abs(self.Food)**0.5)/4)))
+        #if self.Food > 10:
+        #    self.speed = math.ceil(self.ini_speed) * speed #math.ceil(self.ini_speed / ((self.Food / 10)**0.5))
+        #else:
+        #    self.speed = math.ceil(self.ini_speed) * speed
 
     def locateClosestLife(self):
         aLifeForms = self.getLifeFormsNotMe()
         if not len(aLifeForms) == 0:
-            closest = aLifeForms[0]
+            closest = NullForm
             closestVal = self.distanceTo(closest.x,closest.y)
             for lifeForm in aLifeForms:
                 if self.distanceTo(lifeForm.x,lifeForm.y) < closestVal and lifeForm.Food>5:
@@ -275,7 +302,7 @@ class Life:
     def closestLife(self):
         aLifeForms = self.getLifeFormsNotMe()
         if not len(aLifeForms) == 0:
-            closest = aLifeForms[0]
+            closest = NullForm
             closestVal = self.distanceTo(closest.x,closest.y)
             for lifeForm in aLifeForms:
                 if self.distanceTo(lifeForm.x,lifeForm.y) < closestVal and lifeForm.Food>5:
@@ -314,7 +341,10 @@ def pm(val):
 def RemoveFood(foodForm):
     FoodForms.remove(foodForm)
 def RemoveLife(lifeForm):
-    LifeForms.remove(lifeForm)
+    try:
+        LifeForms.remove(lifeForm)
+    except:
+        print("Could not remove lifeForm")
 
 def randomName(bboy):
     r = random.randint(0,4945)
@@ -342,18 +372,6 @@ def mut(val):
     else:
         return val * (1-mutationFactor)
 
-#print("Starting World")
-
-# Definitions
-
-speed = 2
-width = 1200
-height = 800
-
-mutationFactor = 0.1 # Change caused by mutation
-mutationRate = 2 # 1 in this many
-#
-
 world = WorldSim(width,height)
 surface = world.surface
 clock = world.clock
@@ -366,7 +384,6 @@ def CreateLife():
         x, y = random.randint(0, width), random.randint(0, height)
         newLife.Birth(surface, "Gen" + str(a), x, y, "red")
         LifeForms.append(newLife)
-        #print("Created: ", "Gen" + str(a), x, y)
 def GrowFood():
     if randomChance(2):
         newFood = Food()
@@ -415,30 +432,56 @@ pygame.time.set_timer(evTurn, int(10/speed))
 LifeForms = []
 FoodForms = []
 
-Adam = Life()
-x, y = random.randint(0, width), random.randint(0, height)
-#Adam.Birth(surface, "Adam", x, y, Color(0,191,255,0), 2 * speed, 1, 1)
-Adam.Birth(surface, "Adam", x, y, Color(255,0,0,0), 1 * speed, 1, 1, Violence=2)
-LifeForms.append(Adam)
+NullForm = Life()
+NullForm.x = width * 1000
+NullForm.y = height * 1000
 
-Eve = Life()
-x, y = random.randint(0, width), random.randint(0, height)
-#Eve.Birth(surface, "Eve", x, y, Color(255,20,147,0), 1 * speed, 1, 2)
-Eve.Birth(surface, "Eve", x, y, Color(0,255,0,0), 1 * speed, 2, 2)
-LifeForms.append(Eve)
+#Adam = Life()
+#x, y = random.randint(0, width), random.randint(0, height)
+##Adam.Birth(surface, "Adam", x, y, Color(0,191,255,0), 2 * speed, 1, 1)
+#Adam.Birth(surface, "Adam", x, y, Color(255,0,0,0), 1 * speed, 1, 1, Violence=1)
+#LifeForms.append(Adam)
+#
+#Eve = Life()
+#x, y = random.randint(0, width), random.randint(0, height)
+##Eve.Birth(surface, "Eve", x, y, Color(255,20,147,0), 1 * speed, 1, 2)
+#Eve.Birth(surface, "Eve", x, y, Color(0,255,0,0), 1 * speed, 2, 2)
+#LifeForms.append(Eve)
+#
+#Adam2 = Life()
+#x, y = random.randint(0, width), random.randint(0, height)
+#Adam2.Birth(surface, "Adam2", x, y, Color(0,0,255,0), 1 * speed, 1, 4)
+#LifeForms.append(Adam2)
+#
+#Eve2 = Life()
+#x, y = random.randint(0, width), random.randint(0, height)
+#Eve2.Birth(surface, "Eve2", x, y, Color(255,255,0,0), 1 * speed, 100, 2)
+#LifeForms.append(Eve2)
 
-Adam2 = Life()
-x, y = random.randint(0, width), random.randint(0, height)
-Adam2.Birth(surface, "Adam2", x, y, Color(0,0,255,0), 1 * speed, 1, 4)
-LifeForms.append(Adam2)
-
-Eve2 = Life()
-x, y = random.randint(0, width), random.randint(0, height)
-Eve2.Birth(surface, "Eve2", x, y, Color(255,255,0,0), 1 * speed, 100, 2)
-LifeForms.append(Eve2)
+def Spawn(type):
+    if type == 0: # Default
+        life = Life()
+        x, y = 10,10
+        life.Birth(surface, "0 Default", x, y, Color(128, 128, 128, 0), 2, 2, 2)
+        LifeForms.append(life)
+    elif type == 1: # Violence
+        life = Life()
+        x, y = width-10, 10
+        life.Birth(surface, "1 Violence", x, y, Color(255, 0, 0, 0), 1, 1, 1, Violence=2)
+        LifeForms.append(life)
+    elif type == 2: # Speed
+        life = Life()
+        x, y = 10, height - 10
+        life.Birth(surface, "2 Speed", x, y, Color(0, 255, 0, 0), 3, 1, 1)
+        LifeForms.append(life)
+    elif type == 3: # Intelligence
+        life = Life()
+        x, y = width-10,height-10
+        life.Birth(surface, "3 Intelligence", x, y, Color(0, 0, 255, 0), 1, 1, 4, Altruism=1)
+        LifeForms.append(life)
 
 def getBestLifeForm():
-    best = LifeForms[0]
+    best = NullForm
     best_val = best.offsprings
     for lifeForm in LifeForms:
         if lifeForm.offsprings > best_val:
@@ -462,46 +505,54 @@ Simulate = True
 Day = 0
 Hour = 0
 
+bt = False
+
 while Simulate:
     clock.tick(100)
     surface.fill((0,0,0))
+    #if len(LifeForms)>0:
     for lifeForm in LifeForms:
-        pygame.draw.circle(surface, lifeForm.color, (lifeForm.x, lifeForm.y), lifeForm.radius)
+        lifeForm.radius = int(15 * (1 + ((abs(lifeForm.Food) ** 0.5) / 4)))
+        pygame.draw.circle(surface, lifeForm.color, (int(lifeForm.x), int(lifeForm.y)), int(lifeForm.radius))
         drawText(surface, str(int(lifeForm.Food)), (lifeForm.x, lifeForm.y),color=(0,0,0))
         #drawText(surface, str(lifeForm.speed), (lifeForm.x, lifeForm.y-10))
         lifeForm.detectColissions()
+        x,y=pygame.mouse.get_pos()
+        if x < lifeForm.x + lifeForm.radius and x > lifeForm.x - lifeForm.radius and y < lifeForm.y + lifeForm.radius and y > lifeForm.y - lifeForm.radius:
+            print(lifeForm.name, lifeForm.speed, lifeForm.Violence, lifeForm.Altruism, lifeForm.intelligence)
     for foodForm in FoodForms:
         pygame.draw.circle(surface, foodForm.color, (foodForm.x, foodForm.y), foodForm.radius)
     for e in pygame.event.get():
         if e.type == evTime:
             Hour += 1
             #print(len(LifeForms))
-            appendLine(Day*24 +  Hour-1,len(LifeForms))
+            #appendLine(Day*24 +  Hour-1,len(LifeForms))
             #Population.append(len(LifeForms))
             #AverageSpeed.append(getAverageLifeFormSpeed())
             shuffle(LifeForms)
             for lifeForm in LifeForms:
                 lifeForm.life-=1
+                lifeForm.HoursSinceReproduction-=1
                 if lifeForm.life == 0 or lifeForm.Food<0:
                     lifeForm.Kill()
                 lifeForm.PunishForClotting()
-                lifeForm.Food -= 0.1
+                lifeForm.Food -= math.ceil(lifeForm.Food/100)
             if Hour == 24:
-                for lifeForm in LifeForms:
-                    lifeForm.Food -= 1
-                    if lifeForm.Food == -2:
-                        lifeForm.Kill()
+                #for lifeForm in LifeForms:
+                #    #lifeForm.Food -= 1
+                #    if lifeForm.Food  -2:
+                #        lifeForm.Kill()
                 Hour = 0
                 Day+=1
-            if Day == 200:
-                Adam.Food = 0
-                Eve.Food = 0
-                LifeForms = [Adam, Eve]
-                FoodForms = []
-                Hour = 0
-                Day = 0
-            if Day == 200:
-                Simulate = False
+            #if Day == 200:
+                #Adam.Food = 0
+                #Eve.Food = 0
+                #LifeForms = [Adam, Eve]
+                #FoodForms = []
+                #Hour = 0
+                #Day = 0
+            #if Day == 200:
+                #Simulate = False
         if e.type == evTurn:
             for lifeForm in LifeForms:
                 lifeForm.Think()
@@ -511,8 +562,22 @@ while Simulate:
             GrowFood()
     if pygame.key.get_pressed()[pygame.K_KP9] != 0:
         EndSimulation()
+    elif pygame.key.get_pressed()[pygame.K_KP1] != 0 and bt == False:
+        Spawn(0)
+        bt = True
+    elif pygame.key.get_pressed()[pygame.K_KP2] != 0 and bt == False:
+        Spawn(1)
+        bt = True
+    elif pygame.key.get_pressed()[pygame.K_KP3] != 0 and bt == False:
+        Spawn(2)
+        bt = True
+    elif pygame.key.get_pressed()[pygame.K_KP4] != 0 and bt == False:
+        Spawn(3)
+        bt = True
+    elif pygame.key.get_pressed()[pygame.K_KP0]:
+        bt = False
     drawText(surface, str("Day: " + str(Day) + ", Hour: " + str(Hour) + " | Life forms: " + str(len(LifeForms))), (0,0))
     bestLifeForm = getBestLifeForm()
     drawText(surface, str("Best: " + bestLifeForm.name + " | Offsprings: "+str(bestLifeForm.offsprings) + " | Speed: " + str(bestLifeForm.speed)), (0,20))
     pygame.display.flip()
-EndSimulation()
+#EndSimulation()
