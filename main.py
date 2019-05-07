@@ -13,7 +13,7 @@ lAverageSpeed = []
 
 # DEFINITIONS
 
-speed = 2
+speed = 4
 width = 1200
 height = 800
 
@@ -114,11 +114,11 @@ class Life:
                         clLife = self.closestLife()
                         x1, y1 = clLife.x, clLife.y
                         d = self.distanceTo(x1,y1)
-                    if d < self.distanceTo(x,y) and len(LifeForms) > 1 and clLife.Violence == 0:
-                        if d < self.radius + clLife.radius:
-                            self.Murder(clLife)
-                        else:
-                            self.Move(x1, y1)
+                        if d < self.distanceTo(x,y) and len(LifeForms) > 1 and clLife.Violence == 0:
+                            if d < self.radius + clLife.radius:
+                                self.Murder(clLife)
+                            else:
+                                self.Move(x1, y1)
                     else:
                         self.Move(x,y)
             else:
@@ -234,9 +234,15 @@ class Life:
                     partner.Food-=5
                 self.offsprings+=1
                 partner.offsprings+=1
-                self.HoursSinceReproduction = 24
-                partner.HoursSinceReproduction = 24
-            elif self.Violence >= 2 and partner.Violence < 1:
+                self.HoursSinceReproduction = 6
+                partner.HoursSinceReproduction = 6
+                if self.Altruism >= 1:
+                    newLife.Food += int(self.Food/2)
+                    self.Food -= int(self.Food/2)
+                if partner.Altruism >= 1:
+                    newLife.Food += int(partner.Food / 2)
+                    partner.Food -= int(partner.Food / 2)
+            elif self.Violence >= 2 and partner.Violence <= 1:
                 #self.Food-=5
                 #partner.Food-=5
                 #clLife = self.closestLife()
